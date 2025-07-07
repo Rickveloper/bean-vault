@@ -60,8 +60,17 @@
       margin-top: 0.5rem;
       border-radius: 8px;
     }
+    .log-container {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 1.5rem;
+    }
+    @media (min-width: 600px) {
+      .log-container {
+        grid-template-columns: 1fr 1fr;
+      }
+    }
     .log-entry {
-      margin-bottom: 1.5rem;
       text-align: center;
     }
     .bean-card {
@@ -71,6 +80,18 @@
       box-shadow: 0 0 10px rgba(0,0,0,0.4);
       display: block;
       margin: auto;
+    }
+    .card-notes {
+      margin-top: 0.5rem;
+      font-size: 0.9rem;
+      color: #ccc;
+    }
+    .buy-again {
+      font-size: 1.2rem;
+      margin-top: 0.25rem;
+    }
+    .buy-again span {
+      font-size: 1.5rem;
     }
   </style>
 </head>
@@ -102,12 +123,16 @@
       <option>☕☕☕☕☕</option>
     </select>
     <textarea id="notes" placeholder="Tasting notes, vibe, etc."></textarea>
+    <label>
+      <input type="checkbox" id="buyAgain" />
+      Would Buy Again?
+    </label>
     <input type="file" id="imageUpload" accept="image/*" />
     <img id="preview" class="preview-img" style="display:none;" />
     <button type="submit">Add Coffee</button>
   </form>
 
-  <div id="logContainer"></div>
+  <div id="logContainer" class="log-container"></div>
 
   <script>
     const form = document.getElementById('coffeeForm');
@@ -182,64 +207,59 @@
         img.src = cardURL;
         img.className = 'bean-card';
         div.appendChild(img);
+
+        if (entry.notes) {
+          const notes = document.createElement('div');
+          notes.className = 'card-notes';
+          notes.innerText = entry.notes;
+          div.appendChild(notes);
+        }
+
+        const buyAgain = document.createElement('div');
+        buyAgain.className = 'buy-again';
+        buyAgain.innerHTML = `<span>${entry.buyAgain ? '✅ Would Buy Again' : '❌ Would Not Buy Again'}</span>`;
+        div.appendChild(buyAgain);
+
         logContainer.appendChild(div);
       }
     }
 
     form.addEventListener('submit', async e => {
-  e.preventDefault();
-
-  const name = document.getElementById('coffeeName').value.trim();
-  const origin = document.getElementById('origin').value.trim();
-  const method = document.getElementById('brewMethod').value;
-  const rating = document.getElementById('rating').value;
-
-  if (!name || !origin || !method || !rating) {
-    alert('Please fill out all required fields.');
-    return;
-  }
-
-  const entry = {
-    name,
-    roaster: document.getElementById('roaster').value.trim(),
-    origin,
-    method,
-    rating,
-    notes: document.getElementById('notes').value.trim(),
-    image: uploadedImageData || ''
-  };
-
-  try {
-    const log = JSON.parse(localStorage.getItem('coffeeLog') || '[]');
-    log.push(entry);
-    localStorage.setItem('coffeeLog', JSON.stringify(log));
-    form.reset();
-    uploadedImageData = '';
-    preview.style.display = 'none';
-    await loadLog();
-  } catch (err) {
-    console.error('Failed to add coffee:', err);
-    alert('Something went wrong while saving. Try again.');
-  }
-});
       e.preventDefault();
+
+      const name = document.getElementById('coffeeName').value.trim();
+      const origin = document.getElementById('origin').value.trim();
+      const method = document.getElementById('brewMethod').value;
+      const rating = document.getElementById('rating').value;
+
+      if (!name || !origin || !method || !rating) {
+        alert('Please fill out all required fields.');
+        return;
+      }
+
       const entry = {
-        name: document.getElementById('coffeeName').value.trim(),
+        name,
         roaster: document.getElementById('roaster').value.trim(),
-        origin: document.getElementById('origin').value.trim(),
-        method: document.getElementById('brewMethod').value,
-        rating: document.getElementById('rating').value,
+        origin,
+        method,
+        rating,
         notes: document.getElementById('notes').value.trim(),
-        image: uploadedImageData
+        image: uploadedImageData || '',
+        buyAgain: document.getElementById('buyAgain').checked
       };
 
-      const log = JSON.parse(localStorage.getItem('coffeeLog') || '[]');
-      log.push(entry);
-      localStorage.setItem('coffeeLog', JSON.stringify(log));
-      form.reset();
-      uploadedImageData = '';
-      preview.style.display = 'none';
-      loadLog();
+      try {
+        const log = JSON.parse(localStorage.getItem('coffeeLog') || '[]');
+        log.push(entry);
+        localStorage.setItem('coffeeLog', JSON.stringify(log));
+        form.reset();
+        uploadedImageData = '';
+        preview.style.display = 'none';
+        await loadLog();
+      } catch (err) {
+        console.error('Failed to add coffee:', err);
+        alert('Something went wrong while saving. Try again.');
+      }
     });
 
     loadLog();
