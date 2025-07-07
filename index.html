@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>BeanVault ☕</title>
+  <style>
+    :root {
+      --bg: #1e1e1e;
+      --fg: #f5f5f5;
+      --accent: #c28f42;
+    }
+    body {
+      background: var(--bg);
+      color: var(--fg);
+      font-family: 'Arial', sans-serif;
+      margin: 0;
+      padding: 1rem;
+    }
+    h1 {
+      text-align: center;
+      color: var(--accent);
+    }
+    form {
+      display: flex;
+      flex-direction: column;
+      gap: 0.75rem;
+      margin-bottom: 2rem;
+    }
+    input, textarea, select, button {
+      padding: 0.75rem;
+      border: none;
+      border-radius: 5px;
+      font-size: 1rem;
+    }
+    input, textarea, select {
+      background: #2a2a2a;
+      color: white;
+    }
+    button {
+      background: var(--accent);
+      color: #000;
+      font-weight: bold;
+    }
+    .log-entry {
+      border: 1px solid #333;
+      padding: 1rem;
+      border-radius: 8px;
+      margin-bottom: 1rem;
+      background: #2a2a2a;
+    }
+    .rating {
+      font-size: 1.2rem;
+      color: gold;
+    }
+    #map {
+      height: 300px;
+      border-radius: 8px;
+      margin-top: 2rem;
+      display: none; /* For future use */
+    }
+  </style>
+</head>
+<body>
+  <h1>BeanVault ☕</h1>
+  <form id="coffeeForm">
+    <input type="text" id="coffeeName" placeholder="Coffee Name" required />
+    <input type="text" id="roaster" placeholder="Roaster" />
+    <input type="text" id="origin" placeholder="Origin (e.g., Ethiopia)" required />
+    <select id="brewMethod">
+      <option value="">Select Brew Method</option>
+      <option>Pour-Over</option>
+      <option>Espresso</option>
+      <option>Drip</option>
+      <option>French Press</option>
+      <option>AeroPress</option>
+      <option>Cold Brew</option>
+    </select>
+    <select id="rating">
+      <option value="">Rating</option>
+      <option>☕</option>
+      <option>☕☕</option>
+      <option>☕☕☕</option>
+      <option>☕☕☕☕</option>
+      <option>☕☕☕☕☕</option>
+    </select>
+    <textarea id="notes" placeholder="Tasting notes, vibe, etc."></textarea>
+    <button type="submit">Add Coffee</button>
+  </form>
+
+  <div id="logContainer"></div>
+
+  <div id="map"></div> <!-- Reserved for later map integration -->
+
+  <script>
+    const form = document.getElementById('coffeeForm');
+    const logContainer = document.getElementById('logContainer');
+
+    function loadLog() {
+      const log = JSON.parse(localStorage.getItem('coffeeLog') || '[]');
+      logContainer.innerHTML = '';
+      log.reverse().forEach(entry => {
+        const div = document.createElement('div');
+        div.className = 'log-entry';
+        div.innerHTML = `
+          <strong>${entry.name}</strong> – <em>${entry.origin}</em><br/>
+          <small>Brewed with ${entry.method} | Rated: <span class="rating">${entry.rating}</span></small><br/>
+          ${entry.roaster ? `<small>Roaster: ${entry.roaster}</small><br/>` : ''}
+          ${entry.notes ? `<p>${entry.notes}</p>` : ''}
+        `;
+        logContainer.appendChild(div);
+      });
+    }
+
+    form.addEventListener('submit', e => {
+      e.preventDefault();
+      const entry = {
+        name: document.getElementById('coffeeName').value.trim(),
+        roaster: document.getElementById('roaster').value.trim(),
+        origin: document.getElementById('origin').value.trim(),
+        method: document.getElementById('brewMethod').value,
+        rating: document.getElementById('rating').value,
+        notes: document.getElementById('notes').value.trim()
+      };
+
+      const log = JSON.parse(localStorage.getItem('coffeeLog') || '[]');
+      log.push(entry);
+      localStorage.setItem('coffeeLog', JSON.stringify(log));
+      form.reset();
+      loadLog();
+    });
+
+    loadLog();
+  </script>
+</body>
+</html>
