@@ -56,25 +56,21 @@
     }
     .preview-img {
       max-width: 100%;
-      max-height: 150px;
+      max-height: 200px;
       margin-top: 0.5rem;
       border-radius: 8px;
     }
     .log-entry {
-      border: 1px solid #333;
-      padding: 1rem;
-      border-radius: 8px;
-      margin-bottom: 1rem;
-      background: #2a2a2a;
+      margin-bottom: 1.5rem;
+      text-align: center;
     }
-    .log-entry img {
-      max-width: 100%;
-      border-radius: 8px;
-      margin-bottom: 0.5rem;
-    }
-    .rating {
-      font-size: 1.2rem;
-      color: gold;
+    .bean-card {
+      width: 225px;
+      height: 300px;
+      border-radius: 12px;
+      box-shadow: 0 0 10px rgba(0,0,0,0.4);
+      display: block;
+      margin: auto;
     }
   </style>
 </head>
@@ -132,24 +128,65 @@
       }
     });
 
-    function loadLog() {
-      const log = JSON.parse(localStorage.getItem('coffeeLog') || '[]');
-      logContainer.innerHTML = '';
-      log.reverse().forEach(entry => {
-        const div = document.createElement('div');
-        div.className = 'log-entry';
-        div.innerHTML = `
-          ${entry.image ? `<img src="${entry.image}" />` : ''}
-          <strong>${entry.name}</strong> – <em>${entry.origin}</em><br/>
-          <small>Brewed with ${entry.method} | Rated: <span class="rating">${entry.rating}</span></small><br/>
-          ${entry.roaster ? `<small>Roaster: ${entry.roaster}</small><br/>` : ''}
-          ${entry.notes ? `<p>${entry.notes}</p>` : ''}
-        `;
-        logContainer.appendChild(div);
+    async function renderBeanCard(imageSrc, name, origin, method, rating) {
+      return new Promise((resolve) => {
+        const canvas = document.createElement('canvas');
+        const ctx = canvas.getContext('2d');
+        const CARD_WIDTH = 225;
+        const CARD_HEIGHT = 300;
+        canvas.width = CARD_WIDTH;
+        canvas.height = CARD_HEIGHT;
+
+        const img = new Image();
+        img.onload = () => {
+          const aspect = img.width / img.height;
+          const targetAspect = CARD_WIDTH / CARD_HEIGHT;
+          let sx = 0, sy = 0, sw = img.width, sh = img.height;
+
+          if (aspect > targetAspect) {
+            sw = img.height * targetAspect;
+            sx = (img.width - sw) / 2;
+          } else {
+            sh = img.width / targetAspect;
+            sy = (img.height - sh) / 2;
+          }
+
+          ctx.drawImage(img, sx, sy, sw, sh, 0, 0, CARD_WIDTH, CARD_HEIGHT);
+
+          // Overlay
+          ctx.fillStyle = 'rgba(0,0,0,0.6)';
+          ctx.fillRect(0, CARD_HEIGHT - 70, CARD_WIDTH, 70);
+
+          ctx.fillStyle = 'white';
+          ctx.font = 'bold 16px Arial';
+          ctx.fillText(name, 10, CARD_HEIGHT - 50);
+
+          ctx.font = '12px Arial';
+          ctx.fillText(origin, 10, CARD_HEIGHT - 30);
+          ctx.fillText(method + " | " + rating, 10, CARD_HEIGHT - 15);
+
+          resolve(canvas.toDataURL());
+        };
+        img.src = imageSrc;
       });
     }
 
-    form.addEventListener('submit', e => {
+    async function loadLog() {
+      const log = JSON.parse(localStorage.getItem('coffeeLog') || '[]');
+      logContainer.innerHTML = '';
+      for (const entry of log.reverse()) {
+        const cardURL = await renderBeanCard(entry.image, entry.name, entry.origin, entry.method, entry.rating);
+        const div = document.createElement('div');
+        div.className = 'log-entry';
+        const img = document.createElement('img');
+        img.src = cardURL;
+        img.className = 'bean-card';
+        div.appendChild(img);
+        logContainer.appendChild(div);
+      }
+    }
+
+    form.addEventListener('submit', async e => {
       e.preventDefault();
       const entry = {
         name: document.getElementById('coffeeName').value.trim(),
