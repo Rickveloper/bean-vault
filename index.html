@@ -187,6 +187,41 @@
     }
 
     form.addEventListener('submit', async e => {
+  e.preventDefault();
+
+  const name = document.getElementById('coffeeName').value.trim();
+  const origin = document.getElementById('origin').value.trim();
+  const method = document.getElementById('brewMethod').value;
+  const rating = document.getElementById('rating').value;
+
+  if (!name || !origin || !method || !rating) {
+    alert('Please fill out all required fields.');
+    return;
+  }
+
+  const entry = {
+    name,
+    roaster: document.getElementById('roaster').value.trim(),
+    origin,
+    method,
+    rating,
+    notes: document.getElementById('notes').value.trim(),
+    image: uploadedImageData || ''
+  };
+
+  try {
+    const log = JSON.parse(localStorage.getItem('coffeeLog') || '[]');
+    log.push(entry);
+    localStorage.setItem('coffeeLog', JSON.stringify(log));
+    form.reset();
+    uploadedImageData = '';
+    preview.style.display = 'none';
+    await loadLog();
+  } catch (err) {
+    console.error('Failed to add coffee:', err);
+    alert('Something went wrong while saving. Try again.');
+  }
+});
       e.preventDefault();
       const entry = {
         name: document.getElementById('coffeeName').value.trim(),
