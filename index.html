@@ -140,11 +140,19 @@
     const logContainer = document.getElementById('logContainer');
     let uploadedImageData = '';
 
-    document.getElementById('imageUpload').addEventListener('change', function() {
+    document.getElementById('imageUpload').addEventListener('change', function () {
       const file = this.files[0];
       if (file) {
+        if (file.size > 2 * 1024 * 1024) {
+          alert('Image too large. Please use one under 2MB.');
+          this.value = '';
+          uploadedImageData = '';
+          preview.style.display = 'none';
+          return;
+        }
+
         const reader = new FileReader();
-        reader.onload = function(e) {
+        reader.onload = function (e) {
           uploadedImageData = e.target.result;
           preview.src = uploadedImageData;
           preview.style.display = 'block';
@@ -154,7 +162,7 @@
     });
 
     async function renderBeanCard(imageSrc, name, origin, method, rating) {
-      return new Promise((resolve) => {
+      return new Promise((resolve, reject) => {
         const canvas = document.createElement('canvas');
         const ctx = canvas.getContext('2d');
         const CARD_WIDTH = 225;
@@ -178,7 +186,6 @@
 
           ctx.drawImage(img, sx, sy, sw, sh, 0, 0, CARD_WIDTH, CARD_HEIGHT);
 
-          // Overlay
           ctx.fillStyle = 'rgba(0,0,0,0.6)';
           ctx.fillRect(0, CARD_HEIGHT - 70, CARD_WIDTH, 70);
 
@@ -192,6 +199,7 @@
 
           resolve(canvas.toDataURL());
         };
+        img.onerror = () => reject("Image failed to load");
         img.src = imageSrc;
       });
     }
@@ -200,27 +208,31 @@
       const log = JSON.parse(localStorage.getItem('coffeeLog') || '[]');
       logContainer.innerHTML = '';
       for (const entry of log.reverse()) {
-        const cardURL = await renderBeanCard(entry.image, entry.name, entry.origin, entry.method, entry.rating);
-        const div = document.createElement('div');
-        div.className = 'log-entry';
-        const img = document.createElement('img');
-        img.src = cardURL;
-        img.className = 'bean-card';
-        div.appendChild(img);
+        try {
+          const cardURL = await renderBeanCard(entry.image, entry.name, entry.origin, entry.method, entry.rating);
+          const div = document.createElement('div');
+          div.className = 'log-entry';
+          const img = document.createElement('img');
+          img.src = cardURL;
+          img.className = 'bean-card';
+          div.appendChild(img);
 
-        if (entry.notes) {
-          const notes = document.createElement('div');
-          notes.className = 'card-notes';
-          notes.innerText = entry.notes;
-          div.appendChild(notes);
+          if (entry.notes) {
+            const notes = document.createElement('div');
+            notes.className = 'card-notes';
+            notes.innerText = entry.notes;
+            div.appendChild(notes);
+          }
+
+          const buyAgain = document.createElement('div');
+          buyAgain.className = 'buy-again';
+          buyAgain.innerHTML = `<span>${entry.buyAgain ? '✅ Would Buy Again' : '❌ Would Not Buy Again'}</span>`;
+          div.appendChild(buyAgain);
+
+          logContainer.appendChild(div);
+        } catch (err) {
+          console.warn('Failed to render entry:', err);
         }
-
-        const buyAgain = document.createElement('div');
-        buyAgain.className = 'buy-again';
-        buyAgain.innerHTML = `<span>${entry.buyAgain ? '✅ Would Buy Again' : '❌ Would Not Buy Again'}</span>`;
-        div.appendChild(buyAgain);
-
-        logContainer.appendChild(div);
       }
     }
 
@@ -234,6 +246,11 @@
 
       if (!name || !origin || !method || !rating) {
         alert('Please fill out all required fields.');
+        return;
+      }
+
+      if (uploadedImageData && uploadedImageData.length > 2000000) {
+        alert('Image data too large. Try a smaller photo.');
         return;
       }
 
@@ -258,7 +275,12 @@
         await loadLog();
       } catch (err) {
         console.error('Failed to add coffee:', err);
-        alert('Something went wrong while saving. Try again.');
+        alert(`Something went wrong while saving:
+- Image too large
+- Storage limit exceeded
+- Invalid data
+
+Try again with a smaller image or clear history.`);
       }
     });
 
