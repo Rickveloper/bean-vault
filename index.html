@@ -17,8 +17,20 @@
       margin: 0;
       padding: 1rem;
     }
-    h1 {
+    header {
       text-align: center;
+      margin-bottom: 1rem;
+    }
+    .logo {
+      width: 60px;
+      height: 60px;
+      border-radius: 50%;
+      background: var(--accent);
+      display: inline-block;
+      margin-bottom: 0.5rem;
+    }
+    h1 {
+      margin: 0;
       color: var(--accent);
     }
     form {
@@ -42,6 +54,12 @@
       color: #000;
       font-weight: bold;
     }
+    .preview-img {
+      max-width: 100%;
+      max-height: 150px;
+      margin-top: 0.5rem;
+      border-radius: 8px;
+    }
     .log-entry {
       border: 1px solid #333;
       padding: 1rem;
@@ -49,20 +67,23 @@
       margin-bottom: 1rem;
       background: #2a2a2a;
     }
+    .log-entry img {
+      max-width: 100%;
+      border-radius: 8px;
+      margin-bottom: 0.5rem;
+    }
     .rating {
       font-size: 1.2rem;
       color: gold;
     }
-    #map {
-      height: 300px;
-      border-radius: 8px;
-      margin-top: 2rem;
-      display: none; /* For future use */
-    }
   </style>
 </head>
 <body>
-  <h1>BeanVault ☕</h1>
+  <header>
+    <div class="logo"></div>
+    <h1>BeanVault ☕</h1>
+  </header>
+
   <form id="coffeeForm">
     <input type="text" id="coffeeName" placeholder="Coffee Name" required />
     <input type="text" id="roaster" placeholder="Roaster" />
@@ -85,16 +106,31 @@
       <option>☕☕☕☕☕</option>
     </select>
     <textarea id="notes" placeholder="Tasting notes, vibe, etc."></textarea>
+    <input type="file" id="imageUpload" accept="image/*" />
+    <img id="preview" class="preview-img" style="display:none;" />
     <button type="submit">Add Coffee</button>
   </form>
 
   <div id="logContainer"></div>
 
-  <div id="map"></div> <!-- Reserved for later map integration -->
-
   <script>
     const form = document.getElementById('coffeeForm');
+    const preview = document.getElementById('preview');
     const logContainer = document.getElementById('logContainer');
+    let uploadedImageData = '';
+
+    document.getElementById('imageUpload').addEventListener('change', function() {
+      const file = this.files[0];
+      if (file) {
+        const reader = new FileReader();
+        reader.onload = function(e) {
+          uploadedImageData = e.target.result;
+          preview.src = uploadedImageData;
+          preview.style.display = 'block';
+        };
+        reader.readAsDataURL(file);
+      }
+    });
 
     function loadLog() {
       const log = JSON.parse(localStorage.getItem('coffeeLog') || '[]');
@@ -103,6 +139,7 @@
         const div = document.createElement('div');
         div.className = 'log-entry';
         div.innerHTML = `
+          ${entry.image ? `<img src="${entry.image}" />` : ''}
           <strong>${entry.name}</strong> – <em>${entry.origin}</em><br/>
           <small>Brewed with ${entry.method} | Rated: <span class="rating">${entry.rating}</span></small><br/>
           ${entry.roaster ? `<small>Roaster: ${entry.roaster}</small><br/>` : ''}
@@ -120,13 +157,16 @@
         origin: document.getElementById('origin').value.trim(),
         method: document.getElementById('brewMethod').value,
         rating: document.getElementById('rating').value,
-        notes: document.getElementById('notes').value.trim()
+        notes: document.getElementById('notes').value.trim(),
+        image: uploadedImageData
       };
 
       const log = JSON.parse(localStorage.getItem('coffeeLog') || '[]');
       log.push(entry);
       localStorage.setItem('coffeeLog', JSON.stringify(log));
       form.reset();
+      uploadedImageData = '';
+      preview.style.display = 'none';
       loadLog();
     });
 
