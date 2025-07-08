@@ -70,28 +70,59 @@
         grid-template-columns: 1fr 1fr;
       }
     }
-    .log-entry {
-      text-align: center;
+
+    /* Card Flip Styles */
+    .card-wrapper {
+      perspective: 1000px;
     }
-    .bean-card {
+    .card {
       width: 225px;
       height: 300px;
+      margin: auto;
+      position: relative;
+      transform-style: preserve-3d;
+      transition: transform 0.6s;
+    }
+    .card.flipped {
+      transform: rotateY(180deg);
+    }
+    .card-side {
+      position: absolute;
+      width: 100%;
+      height: 100%;
+      backface-visibility: hidden;
       border-radius: 12px;
       box-shadow: 0 0 10px rgba(0,0,0,0.4);
-      display: block;
-      margin: auto;
     }
-    .card-notes {
-      margin-top: 0.5rem;
-      font-size: 0.9rem;
-      color: #ccc;
+    .card-front {
+      background: #000;
     }
-    .buy-again {
-      font-size: 1.2rem;
-      margin-top: 0.25rem;
+    .card-back {
+      background: #2a2a2a;
+      transform: rotateY(180deg);
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      padding: 1rem;
+      box-sizing: border-box;
+      text-align: left;
     }
-    .buy-again span {
-      font-size: 1.5rem;
+    .card-back h3 {
+      margin-top: 0;
+      color: var(--accent);
+    }
+    .card-back button {
+      margin-top: 1rem;
+      background: #444;
+      color: white;
+    }
+    .edit-form input, .edit-form textarea, .edit-form select {
+      width: 100%;
+      margin-bottom: 0.5rem;
+    }
+    .edit-form {
+      margin-top: 1rem;
     }
   </style>
 </head>
@@ -133,116 +164,161 @@
   </form>
 
   <div id="logContainer" class="log-container"></div>
-
-  <script>
+    <script>
     const form = document.getElementById('coffeeForm');
     const preview = document.getElementById('preview');
     const logContainer = document.getElementById('logContainer');
     let uploadedImageData = '';
 
+    document.getElementById('imageUpload').addEventListener('change', function () {
+      const file = this.files[0];
+      if (!file) return;
 
-document.getElementById('imageUpload').addEventListener('change', function () {
-  const file = this.files[0];
-  if (!file) return;
+      const reader = new FileReader();
+      reader.onload = function (e) {
+        const img = new Image();
+        img.onload = function () {
+          const canvas = document.createElement('canvas');
+          const TARGET_WIDTH = 500;
+          const aspect = img.width / img.height;
+          canvas.width = TARGET_WIDTH;
+          canvas.height = TARGET_WIDTH / aspect;
+          const ctx = canvas.getContext('2d');
+          ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+          uploadedImageData = canvas.toDataURL('image/jpeg', 0.85);
+          preview.src = uploadedImageData;
+          preview.style.display = 'block';
+        };
+        img.src = e.target.result;
+      };
+      reader.readAsDataURL(file);
+    });
 
-  const reader = new FileReader();
-  reader.onload = function (e) {
-    const img = new Image();
-    img.onload = function () {
-      const canvas = document.createElement('canvas');
-      const MAX_WIDTH = 500;
-      const scale = MAX_WIDTH / img.width;
-      canvas.width = MAX_WIDTH;
-      canvas.height = img.height * scale;
-      const ctx = canvas.getContext('2d');
-      ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-      uploadedImageData = canvas.toDataURL('image/jpeg', 0.8);
-
-      // Set preview
-      preview.src = uploadedImageData;
-      preview.style.display = 'block';
-    };
-    img.onerror = function () {
-      alert("Failed to load image.");
-      uploadedImageData = '';
-    };
-    img.src = e.target.result;
-  };
-  reader.readAsDataURL(file);
-});
-    async function renderBeanCard(imageSrc, name, origin, method, rating) {
-      return new Promise((resolve, reject) => {
+    async function renderBeanCard(entry, index) {
+      return new Promise((resolve) => {
         const canvas = document.createElement('canvas');
         const ctx = canvas.getContext('2d');
-        const CARD_WIDTH = 225;
-        const CARD_HEIGHT = 300;
+        const CARD_WIDTH = 450;
+        const CARD_HEIGHT = 600;
         canvas.width = CARD_WIDTH;
         canvas.height = CARD_HEIGHT;
 
         const img = new Image();
         img.onload = () => {
-          const aspect = img.width / img.height;
-          const targetAspect = CARD_WIDTH / CARD_HEIGHT;
-          let sx = 0, sy = 0, sw = img.width, sh = img.height;
-
-          if (aspect > targetAspect) {
-            sw = img.height * targetAspect;
-            sx = (img.width - sw) / 2;
-          } else {
-            sh = img.width / targetAspect;
-            sy = (img.height - sh) / 2;
-          }
-
-          ctx.drawImage(img, sx, sy, sw, sh, 0, 0, CARD_WIDTH, CARD_HEIGHT);
+          const cropX = img.width * 0.1;
+          const cropY = img.height * 0.1;
+          const cropW = img.width * 0.8;
+          const cropH = img.height * 0.8;
+          ctx.drawImage(img, cropX, cropY, cropW, cropH, 0, 0, CARD_WIDTH, CARD_HEIGHT);
 
           ctx.fillStyle = 'rgba(0,0,0,0.6)';
-          ctx.fillRect(0, CARD_HEIGHT - 70, CARD_WIDTH, 70);
+          ctx.fillRect(0, CARD_HEIGHT - 100, CARD_WIDTH, 100);
 
           ctx.fillStyle = 'white';
-          ctx.font = 'bold 16px Arial';
-          ctx.fillText(name, 10, CARD_HEIGHT - 50);
+          ctx.font = 'bold 28px Arial';
+          ctx.fillText(entry.name, 20, CARD_HEIGHT - 65);
 
-          ctx.font = '12px Arial';
-          ctx.fillText(origin, 10, CARD_HEIGHT - 30);
-          ctx.fillText(method + " | " + rating, 10, CARD_HEIGHT - 15);
+          ctx.font = '18px Arial';
+          ctx.fillText(entry.origin, 20, CARD_HEIGHT - 40);
+          ctx.fillText(entry.method + " | " + entry.rating, 20, CARD_HEIGHT - 20);
 
           resolve(canvas.toDataURL());
         };
-        img.onerror = () => reject("Image failed to load");
-        img.src = imageSrc;
+        img.src = entry.image;
       });
     }
 
     async function loadLog() {
       const log = JSON.parse(localStorage.getItem('coffeeLog') || '[]');
       logContainer.innerHTML = '';
-      for (const entry of log.reverse()) {
-        try {
-          const cardURL = await renderBeanCard(entry.image, entry.name, entry.origin, entry.method, entry.rating);
-          const div = document.createElement('div');
-          div.className = 'log-entry';
-          const img = document.createElement('img');
-          img.src = cardURL;
-          img.className = 'bean-card';
-          div.appendChild(img);
+      for (let i = log.length - 1; i >= 0; i--) {
+        const entry = log[i];
+        const image = await renderBeanCard(entry, i);
 
-          if (entry.notes) {
-            const notes = document.createElement('div');
-            notes.className = 'card-notes';
-            notes.innerText = entry.notes;
-            div.appendChild(notes);
-          }
+        const wrapper = document.createElement('div');
+        wrapper.className = 'card-wrapper';
 
-          const buyAgain = document.createElement('div');
-          buyAgain.className = 'buy-again';
-          buyAgain.innerHTML = `<span>${entry.buyAgain ? '✅ Would Buy Again' : '❌ Would Not Buy Again'}</span>`;
-          div.appendChild(buyAgain);
+        const card = document.createElement('div');
+        card.className = 'card';
+        card.onclick = () => card.classList.toggle('flipped');
 
-          logContainer.appendChild(div);
-        } catch (err) {
-          console.warn('Failed to render entry:', err);
-        }
+        const front = document.createElement('div');
+        front.className = 'card-side card-front';
+        const frontImg = new Image();
+        frontImg.src = image;
+        frontImg.className = 'bean-card';
+        front.appendChild(frontImg);
+
+        const back = document.createElement('div');
+        back.className = 'card-side card-back';
+        back.innerHTML = `
+          <h3>${entry.name}</h3>
+          <p><strong>Origin:</strong> ${entry.origin}</p>
+          <p><strong>Brew:</strong> ${entry.method}</p>
+          <p><strong>Rating:</strong> ${entry.rating}</p>
+          <p><strong>Roaster:</strong> ${entry.roaster || '-'}</p>
+          <p><strong>Notes:</strong> ${entry.notes || '-'}</p>
+          <p><strong>Buy Again:</strong> ${entry.buyAgain ? '✅' : '❌'}</p>
+          <button onclick="editEntry(${i})">Edit</button>
+        `;
+
+        card.appendChild(front);
+        card.appendChild(back);
+        wrapper.appendChild(card);
+        logContainer.appendChild(wrapper);
       }
+    }
+
+    function editEntry(index) {
+      const log = JSON.parse(localStorage.getItem('coffeeLog') || '[]');
+      const entry = log[index];
+
+      const card = document.querySelectorAll('.card')[log.length - 1 - index];
+      const back = card.querySelector('.card-back');
+      back.innerHTML = `
+        <h3>Edit: ${entry.name}</h3>
+        <form class="edit-form" onsubmit="saveEdit(event, ${index})">
+          <input type="text" name="name" value="${entry.name}" required />
+          <input type="text" name="origin" value="${entry.origin}" required />
+          <input type="text" name="roaster" value="${entry.roaster || ''}" />
+          <select name="method" required>
+            <option ${entry.method === 'Pour-Over' ? 'selected' : ''}>Pour-Over</option>
+            <option ${entry.method === 'Espresso' ? 'selected' : ''}>Espresso</option>
+            <option ${entry.method === 'Drip' ? 'selected' : ''}>Drip</option>
+            <option ${entry.method === 'French Press' ? 'selected' : ''}>French Press</option>
+            <option ${entry.method === 'AeroPress' ? 'selected' : ''}>AeroPress</option>
+            <option ${entry.method === 'Cold Brew' ? 'selected' : ''}>Cold Brew</option>
+          </select>
+          <select name="rating" required>
+            <option ${entry.rating === '☕' ? 'selected' : ''}>☕</option>
+            <option ${entry.rating === '☕☕' ? 'selected' : ''}>☕☕</option>
+            <option ${entry.rating === '☕☕☕' ? 'selected' : ''}>☕☕☕</option>
+            <option ${entry.rating === '☕☕☕☕' ? 'selected' : ''}>☕☕☕☕</option>
+            <option ${entry.rating === '☕☕☕☕☕' ? 'selected' : ''}>☕☕☕☕☕</option>
+          </select>
+          <textarea name="notes">${entry.notes || ''}</textarea>
+          <label><input type="checkbox" name="buyAgain" ${entry.buyAgain ? 'checked' : ''} /> Buy Again?</label>
+          <button type="submit">Save</button>
+        </form>
+      `;
+    }
+
+    function saveEdit(event, index) {
+      event.preventDefault();
+      const form = event.target;
+      const log = JSON.parse(localStorage.getItem('coffeeLog') || '[]');
+      log[index] = {
+        ...log[index],
+        name: form.name.value.trim(),
+        origin: form.origin.value.trim(),
+        roaster: form.roaster.value.trim(),
+        method: form.method.value,
+        rating: form.rating.value,
+        notes: form.notes.value.trim(),
+        buyAgain: form.buyAgain.checked
+      };
+      localStorage.setItem('coffeeLog', JSON.stringify(log));
+      loadLog();
     }
 
     form.addEventListener('submit', async e => {
@@ -279,7 +355,7 @@ document.getElementById('imageUpload').addEventListener('change', function () {
         await loadLog();
       } catch (err) {
         console.error('Failed to add coffee:', err);
-        alert(`Something went wrong while saving. Try again.`);
+        alert('Something went wrong while saving. Try again.');
       }
     });
 
