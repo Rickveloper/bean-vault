@@ -143,19 +143,22 @@
     document.getElementById('imageUpload').addEventListener('change', function () {
       const file = this.files[0];
       if (file) {
-        if (file.size > 2 * 1024 * 1024) {
-          alert('Image too large. Please use one under 2MB.');
-          this.value = '';
-          uploadedImageData = '';
-          preview.style.display = 'none';
-          return;
-        }
-
         const reader = new FileReader();
         reader.onload = function (e) {
-          uploadedImageData = e.target.result;
-          preview.src = uploadedImageData;
-          preview.style.display = 'block';
+          const img = new Image();
+          img.onload = function () {
+            const canvas = document.createElement('canvas');
+            const MAX_WIDTH = 500;
+            const scale = MAX_WIDTH / img.width;
+            canvas.width = MAX_WIDTH;
+            canvas.height = img.height * scale;
+            const ctx = canvas.getContext('2d');
+            ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+            uploadedImageData = canvas.toDataURL('image/jpeg', 0.8);
+            preview.src = uploadedImageData;
+            preview.style.display = 'block';
+          };
+          img.src = e.target.result;
         };
         reader.readAsDataURL(file);
       }
@@ -249,11 +252,6 @@
         return;
       }
 
-      if (uploadedImageData && uploadedImageData.length > 2000000) {
-        alert('Image data too large. Try a smaller photo.');
-        return;
-      }
-
       const entry = {
         name,
         roaster: document.getElementById('roaster').value.trim(),
@@ -275,12 +273,7 @@
         await loadLog();
       } catch (err) {
         console.error('Failed to add coffee:', err);
-        alert(`Something went wrong while saving:
-- Image too large
-- Storage limit exceeded
-- Invalid data
-
-Try again with a smaller image or clear history.`);
+        alert(`Something went wrong while saving. Try again.`);
       }
     });
 
